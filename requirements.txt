@@ -1,0 +1,7 @@
+Flask
+requests
+selenium
+webdriver-manager
+pydub
+flask-cors
+gunicorn
