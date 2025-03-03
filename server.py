@@ -305,12 +305,11 @@ def scrape_images():
         return jsonify({"error": "No URL provided"}), 400
 
     chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Run in headless mode
     chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.binary_location = "/usr/bin/google-chrome"
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    chrome_options.add_argument("--no-sandbox")  # Required for running as root in some environments
+    chrome_options.add_argument("--disable-dev-shm-usage")  # Prevents issues with /dev/shm in Docker
+    driver = webdriver.Chrome(service=Service("/usr/bin/chromedriver"), options=chrome_options)
 
     print(f"Processing: {website_url}")
     driver.get(website_url)
