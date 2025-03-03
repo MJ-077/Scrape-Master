@@ -308,8 +308,10 @@ def scrape_images():
     chrome_options.add_argument("--headless")  # Run in headless mode
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")  # Required for running as root in some environments
-    chrome_options.add_argument("--disable-dev-shm-usage")  # Prevents issues with /dev/shm in Docker
-    driver = webdriver.Chrome(service=Service("/usr/bin/chromedriver"), options=chrome_options)
+    chrome_options.add_argument("--disable-dev-shm-usage")  # Prevents /dev/shm issues in Docker
+    
+    # Use the correct path for ChromeDriver
+    driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
 
     print(f"Processing: {website_url}")
     driver.get(website_url)
