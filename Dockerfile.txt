@@ -15,8 +15,8 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add
     apt-get install -y google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# Create a symlink so that /usr/bin/google-chrome-stable points to the installed binary
-RUN ln -s /usr/bin/google-chrome /usr/bin/google-chrome-stable
+# Create a symlink from the actual Chrome binary location to the expected location
+RUN ln -s /opt/google/chrome/google-chrome /usr/bin/google-chrome-stable
 
 # Set the working directory
 WORKDIR /app
