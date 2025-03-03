@@ -32,14 +32,13 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends
 
 # Create a symbolic link so Selenium finds Chrome at /usr/bin/google-chrome
-RUN if [ -f /usr/bin/google-chrome-stable ]; then \
-        ln -sf /usr/bin/google-chrome-stable /usr/bin/google-chrome; \
-    else \
-        ln -sf /opt/google/chrome/google-chrome /usr/bin/google-chrome; \
-    fi
+RUN ln -s /usr/bin/google-chrome-stable /usr/bin/google-chrome
 
-# Set environment variable for Chrome binary location (optional but helpful)
+# Set environment variable for Chrome binary location
 ENV CHROME_BIN=/usr/bin/google-chrome
+
+# (Optional) Debug step: list the Chrome binary to verify installation (remove later)
+RUN ls -l /usr/bin/google-chrome*
 
 # Set the working directory
 WORKDIR /app
