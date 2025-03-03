@@ -1,19 +1,35 @@
 # Use Python as the base image
 FROM python:3.9
 
-# Install dependencies
-RUN apt-get update && apt-get install -y wget curl unzip gnupg
+# Install system dependencies including Chrome prerequisites and ffmpeg for pydub
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    unzip \
+    gnupg \
+    ffmpeg \
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libgbm1 \
+    libnspr4 \
+    libnss3 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    xdg-utils \
+    --no-install-recommends
+
+# Add Google’s official GPG key and repository for Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
+    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" \
+       > /etc/apt/sources.list.d/google-chrome.list
 
 # Install Google Chrome
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google.list && \
-    apt-get update && apt-get install -y google-chrome-stable
-
-# Create a symlink so that Chrome is available at /usr/bin/google-chrome
-RUN ln -sf /usr/bin/google-chrome-stable /usr/bin/google-chrome
-
-# Verify installation (outputs chrome version)
-RUN which google-chrome && google-chrome --version
+RUN apt-get update && apt-get install -y \
+    google-chrome-stable \
+    --no-install-recommends
 
 # Set the working directory
 WORKDIR /app
@@ -21,7 +37,7 @@ WORKDIR /app
 # Copy all project files into the container
 COPY . .
 
-# Upgrade pip and install Python dependencies
+# Upgrade pip and install Python dependencies (make sure your requirements.txt includes flask, flask-cors, requests, selenium, webdriver-manager, and pydub)
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Expose the Flask port
