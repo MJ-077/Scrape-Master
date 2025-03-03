@@ -9,6 +9,9 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add
     echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' >> /etc/apt/sources.list.d/google.list && \
     apt-get update && apt-get install -y google-chrome-stable
 
+# Verify installation
+RUN which google-chrome && google-chrome --version
+
 # Set the working directory
 WORKDIR /app
 
