@@ -309,7 +309,7 @@ def scrape_images():
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.binary_location = "/usr/bin/google-chrome-stable"
+    chrome_options.binary_location = "/usr/bin/google-chrome"
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
     print(f"Processing: {website_url}")
