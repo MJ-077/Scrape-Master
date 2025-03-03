@@ -1,6 +1,9 @@
 # Use Python as the base image
 FROM python:3.9
 
+# Set noninteractive mode for apt-get
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install system dependencies including Chrome prerequisites and ffmpeg for pydub
 RUN apt-get update && apt-get install -y \
     wget \
@@ -21,26 +24,33 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     --no-install-recommends
 
-# Add Google’s official GPG key and repository for Chrome
+# Add Google's signing key and repository for Chrome
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" \
-         > /etc/apt/sources.list.d/google-chrome.list
+    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
 
 # Install Google Chrome
-RUN apt-get update && apt-get install -y \
-    google-chrome-stable \
-    --no-install-recommends
+RUN apt-get update && apt-get install -y google-chrome-stable --no-install-recommends
 
-# Create a symbolic link so Selenium finds Chrome at /usr/bin/google-chrome
-RUN ln -s /usr/bin/google-chrome-stable /usr/bin/google-chrome
+# Debug: Print Chrome version to confirm installation
+RUN google-chrome-stable --version
 
-# Set environment variable for Chrome binary location
-ENV CHROME_BIN=/usr/bin/google-chrome
+# Create a symbolic link so Selenium can find Chrome.
+# Check common locations: /usr/bin/google-chrome-stable and /opt/google/chrome/google-chrome
+RUN if [ -f /usr/bin/google-chrome-stable ]; then \
+        ln -sf /usr/bin/google-chrome-stable /usr/bin/google-chrome; \
+    elif [ -f /opt/google/chrome/google-chrome ]; then \
+        ln -sf /opt/google/chrome/google-chrome /usr/bin/google-chrome; \
+    else \
+        echo "Chrome binary not found" && exit 1; \
+    fi
 
-# (Optional) Debug step: list the Chrome binary to verify installation (remove later)
+# Debug: List the chrome binary to verify the symlink
 RUN ls -l /usr/bin/google-chrome*
 
-# Set the working directory
+# Set environment variable for Chrome binary location (this helps some tools)
+ENV CHROME_BIN=/usr/bin/google-chrome
+
+# Set working directory
 WORKDIR /app
 
 # Copy all project files into the container
