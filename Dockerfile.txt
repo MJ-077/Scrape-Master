@@ -1,22 +1,11 @@
-# Use Python 3.9 as the base image
+# Use Python as the base image
 FROM python:3.9
 
-# Install FFmpeg, wget, and gnupg2 for adding Google's signing key
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    wget \
-    gnupg2 \
- && rm -rf /var/lib/apt/lists/*
-
-# Install Google Chrome Stable
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
-    apt-get update && \
-    apt-get install -y google-chrome-stable && \
-    rm -rf /var/lib/apt/lists/*
-
-# Force a symlink from /usr/bin/google-chrome to /usr/bin/google-chrome-stable
-RUN ln -sf /usr/bin/google-chrome /usr/bin/google-chrome-stable
+# Install necessary dependencies including Chrome
+RUN apt-get update && apt-get install -y wget gnupg && \
+    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
+    echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' >> /etc/apt/sources.list.d/google.list && \
+    apt-get update && apt-get install -y google-chrome-stable ffmpeg
 
 # Set the working directory
 WORKDIR /app
@@ -25,10 +14,10 @@ WORKDIR /app
 COPY . .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
-# Expose the port Flask is running on
+# Expose the Flask port
 EXPOSE 5000
 
-# Start the server using Gunicorn
+# Start the server using gunicorn
 CMD ["gunicorn", "-b", "0.0.0.0:5000", "server:app"]
