@@ -305,6 +305,7 @@ def scrape_images():
         return jsonify({"error": "No URL provided"}), 400
     
     chrome_options = Options()
+    chrome_options.binary_location = "/usr/bin/google-chrome"  # Explicitly set Chrome binary path
     chrome_options.add_argument("--headless")  # Run in headless mode
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")  # Required for running as root in some environments
