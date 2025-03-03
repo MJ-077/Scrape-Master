@@ -306,6 +306,10 @@ def scrape_images():
 
     chrome_options = Options()
     chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--headless")  # Run in headless mode
+    chrome_options.add_argument("--no-sandbox")  # Bypass OS security model, needed for Docker
+    chrome_options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
+    chrome_options.binary_location = "/usr/bin/google-chrome"  # Explicitly set the Chrome binary location
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
     print(f"Processing: {website_url}")
