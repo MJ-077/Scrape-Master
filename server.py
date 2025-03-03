@@ -305,14 +305,12 @@ def scrape_images():
         return jsonify({"error": "No URL provided"}), 400
     
     chrome_options = Options()
-    # Point explicitly to Chrome binary (symlink ensures this works)
-    chrome_options.binary_location = "/usr/bin/google-chrome"
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
-    # Let webdriver-manager handle ChromeDriver installation
+    # No need to set chrome_options.binary_location
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
     print(f"Processing: {website_url}")
