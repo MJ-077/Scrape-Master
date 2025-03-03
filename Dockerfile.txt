@@ -1,7 +1,7 @@
 # Use Python 3.9 as the base image
 FROM python:3.9
 
-# Install FFmpeg, wget, and gnupg2 (for adding Google's signing key)
+# Install FFmpeg, wget, and gnupg2 for adding Google's signing key
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     wget \
@@ -15,8 +15,8 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add
     apt-get install -y google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# Create a symlink from the actual Chrome binary location to the expected location
-RUN ln -s /opt/google/chrome/google-chrome /usr/bin/google-chrome-stable
+# Force a symlink from /usr/bin/google-chrome to /usr/bin/google-chrome-stable
+RUN ln -sf /usr/bin/google-chrome /usr/bin/google-chrome-stable
 
 # Set the working directory
 WORKDIR /app
