@@ -30,8 +30,9 @@ RUN apt-get update && apt-get install -y \
     google-chrome-stable \
     --no-install-recommends
 
-# Create symbolic link for Chrome so Selenium can find it
-RUN ln -s /usr/bin/google-chrome-stable /usr/bin/google-chrome
+# Create symbolic link for Chrome so Selenium can find it.
+# Typically, the binary is installed in /opt/google/chrome/google-chrome
+RUN ln -sf /opt/google/chrome/google-chrome /usr/bin/google-chrome
 
 # Set the working directory
 WORKDIR /app
@@ -39,7 +40,7 @@ WORKDIR /app
 # Copy all project files into the container
 COPY . .
 
-# Upgrade pip and install Python dependencies (requirements.txt should include flask, requests, selenium, webdriver-manager, pydub, flask-cors, gunicorn)
+# Upgrade pip and install Python dependencies
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Expose the Flask port
