@@ -10,12 +10,13 @@ import time
 import re
 import platform
 import subprocess
+import zipfile
 from urllib.parse import urljoin, urlparse
 from pathlib import Path
 from threading import Thread
 
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -297,6 +298,11 @@ def play_success_sound():
     except Exception as e:
         print(f"Error playing sound: {e}")
 
+# NEW DOWNLOAD ENDPOINT: Serve downloaded zip files
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory('downloaded_images', filename, as_attachment=True)
+
 @app.route('/scrape', methods=['POST'])
 def scrape_images():
     data = request.json
@@ -363,11 +369,25 @@ def scrape_images():
     saved_files = [f for f in os.listdir(folder_name) if os.path.isfile(os.path.join(folder_name, f))]
     count = len(saved_files)
 
-    # Use the saved_files list (and/or count) in your response
+    # Create a zip file of the downloaded images
+    zip_filename = f"{page_title}.zip"
+    zip_filepath = os.path.join("downloaded_images", zip_filename)
+    with zipfile.ZipFile(zip_filepath, 'w') as zipf:
+        for root, dirs, files in os.walk(folder_name):
+            for file in files:
+                file_path = os.path.join(root, file)
+                # arcname=file ensures only the file name is used in the archive
+                zipf.write(file_path, arcname=file)
+    
+    # Construct the download URL (assuming your service is hosted at https://scrape-master-ymzg.onrender.com)
+    download_url = f"/download/{zip_filename}"
+
+    # Return the JSON response including the download URL
     response = jsonify({
         "message": f"Scraping complete, downloaded {count} images",
         "images": saved_files,
-        "folder": folder_name
+        "folder": folder_name,
+        "download_url": download_url
     })
     response.call_on_close(play_success_sound)
     return response
