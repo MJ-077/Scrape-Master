@@ -22,6 +22,9 @@ RUN apt-get update && apt-get install -y \
     libxdamage1 \
     libxrandr2 \
     xdg-utils \
+    libatk-bridge2.0-0 \
+    libxkbcommon-x11-0 \
+    libgtk-3-0 \
     --no-install-recommends
 
 # Add Google's signing key and repository for Chrome
