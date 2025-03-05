@@ -66,4 +66,5 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 EXPOSE 5000
 
 # Start the server using gunicorn
-CMD ["gunicorn", "--log-file=-", "-b", "0.0.0.0:5000", "server:app"]
+CMD ["gunicorn", "--log-file=-", "--timeout", "360", "-b", "0.0.0.0:5000", "server:app"]
+
