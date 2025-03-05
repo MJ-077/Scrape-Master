@@ -34,7 +34,7 @@ def scroll_page(driver):
     last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
         driver.execute_script("window.scrollBy(0, 1000);")
-        time.sleep(5)
+        time.sleep(3)
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
             break
@@ -45,7 +45,7 @@ def scroll_page(driver):
     for img in images:
         try:
             driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", img)
-            time.sleep(5)  # Allow time for lazy loading
+            time.sleep(3)  # Allow time for lazy loading
         except Exception as e:
             print(f"Skipping image due to error: {e}")
 
@@ -56,7 +56,7 @@ def trigger_slider(driver):
         for btn in next_buttons:
             for _ in range(5):
                 btn.click()
-                time.sleep(5)
+                time.sleep(3)
     except Exception as e:
         print(f"Error interacting with slider: {e}")
 
@@ -333,7 +333,7 @@ def scrape_images():
 
     print(f"Processing: {website_url}")
     driver.get(website_url)
-    time.sleep(5)
+    time.sleep(3)
     
     # Debug: print the page title and a snippet of the page source
     print("Page title:", driver.title)
