@@ -310,7 +310,18 @@ def scrape_images():
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--remote-debugging-port=9222")  # Allows debugging
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+
+    import shutil
+    chrome_path = shutil.which("google-chrome")
+    print(f"Google Chrome binary found at: {chrome_path}")
+    
+    try:
+        version_output = subprocess.check_output(["google-chrome", "--version"], text=True)
+        print(f"Google Chrome version: {version_output.strip()}")
+    except Exception as e:
+        print(f"Error retrieving Chrome version: {e}")
 
     print(f"Processing: {website_url}")
     driver.get(website_url)
