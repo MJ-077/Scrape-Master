@@ -60,6 +60,7 @@ def trigger_slider(driver):
     except Exception as e:
         print(f"Error interacting with slider: {e}")
 
+# --- URL Cleaning and Generation ---
 # Combined function to remove dimensions and generate full-size image URLs
 def clean_and_generate_urls(url):
     # Step 1: Remove /thumbs/ and /thumb/ Directories
@@ -76,27 +77,6 @@ def clean_and_generate_urls(url):
         url.replace('/thumbs/', '/uploads/'),
         url.replace('/thumb/', '/uploads/'),
         url.replace('/thumbs/', '/'),
-        url.replace('/thumb/', '/')
-    ]
-
-    # Remove duplicates while preserving order
-    return list(dict.fromkeys(variations))
-
-# --- URL Cleaning and Generation ---
-# Combined function to remove dimensions and generate full-size image URLs
-def clean_and_generate_urls(url):
-    # Step 1: Remove /thumbs/ Directory
-    url = url.replace("/thumbs/", "/")
-
-    # Step 2: Remove Dimensions
-    url = re.sub(r'/\d+x\d+/', '/', url)
-
-    # Step 3: Generate Variations
-    variations = [
-        url,  # Base cleaned URL
-        re.sub(r'/thumb/\d+x\d+/', '/uploads/', url),
-        re.sub(r'/thumb/\d+x\d+/', '/', url),
-        url.replace('/thumb/', '/uploads/'),
         url.replace('/thumb/', '/')
     ]
 
@@ -316,40 +296,16 @@ def scrape_images():
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--remote-debugging-port=9222")  # Allows debugging
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-
-    import shutil
-    chrome_path = shutil.which("google-chrome")
-    print(f"Google Chrome binary found at: {chrome_path}")
-    
-    try:
-        version_output = subprocess.check_output(["google-chrome", "--version"], text=True)
-        print(f"Google Chrome version: {version_output.strip()}")
-    except Exception as e:
-        print(f"Error retrieving Chrome version: {e}")
 
     print(f"Processing: {website_url}")
     driver.get(website_url)
     time.sleep(5)
     
-    # Debug: print the page title and a snippet of the page source
-    print("Page title:", driver.title)
-    print("Page URL:", driver.current_url)
-    print("Page source snippet:", driver.page_source[:1000])
-
-    # Debug: Count the img tags before scrolling
-    initial_imgs = driver.find_elements(By.TAG_NAME, "img")
-    print(f"Found {len(initial_imgs)} <img> tags before scrolling")
-    
     scroll_page(driver)
     trigger_slider(driver)
-
-    # Debug: Count img tags after scrolling
-    all_imgs = driver.find_elements(By.TAG_NAME, "img")
-    print(f"Found {len(all_imgs)} <img> tags after scrolling and triggering sliders")
     
     page_title = get_meta_title(driver)
     image_urls = extract_full_res_images(driver)
