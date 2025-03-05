@@ -33,7 +33,7 @@ def scroll_page(driver):
     last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
         driver.execute_script("window.scrollBy(0, 1000);")
-        time.sleep(2)
+        time.sleep(5)
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
             break
@@ -44,7 +44,7 @@ def scroll_page(driver):
     for img in images:
         try:
             driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", img)
-            time.sleep(0.2)  # Allow time for lazy loading
+            time.sleep(5)  # Allow time for lazy loading
         except Exception as e:
             print(f"Skipping image due to error: {e}")
 
@@ -55,7 +55,7 @@ def trigger_slider(driver):
         for btn in next_buttons:
             for _ in range(5):
                 btn.click()
-                time.sleep(1)
+                time.sleep(5)
     except Exception as e:
         print(f"Error interacting with slider: {e}")
 
@@ -311,6 +311,8 @@ def scrape_images():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--remote-debugging-port=9222")  # Allows debugging
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
     import shutil
@@ -325,11 +327,24 @@ def scrape_images():
 
     print(f"Processing: {website_url}")
     driver.get(website_url)
-
     time.sleep(5)
+    
+    # Debug: print the page title and a snippet of the page source
+    print("Page title:", driver.title)
+    print("Page URL:", driver.current_url)
+    print("Page source snippet:", driver.page_source[:1000])
+
+    # Debug: Count the img tags before scrolling
+    initial_imgs = driver.find_elements(By.TAG_NAME, "img")
+    print(f"Found {len(initial_imgs)} <img> tags before scrolling")
+    
     scroll_page(driver)
     trigger_slider(driver)
 
+    # Debug: Count img tags after scrolling
+    all_imgs = driver.find_elements(By.TAG_NAME, "img")
+    print(f"Found {len(all_imgs)} <img> tags after scrolling and triggering sliders")
+    
     page_title = get_meta_title(driver)
     image_urls = extract_full_res_images(driver)
     driver.quit()
