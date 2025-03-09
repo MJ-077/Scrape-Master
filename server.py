@@ -11,6 +11,9 @@ import re
 import platform
 import subprocess
 import zipfile
+import threading  # NEW: for background tasks
+import uuid       # NEW: to generate unique job IDs
+
 from urllib.parse import urljoin, urlparse
 from pathlib import Path
 
@@ -36,6 +39,12 @@ def get_chromedriver_path():
     if CHROMEDRIVER_PATH is None:
         CHROMEDRIVER_PATH = ChromeDriverManager().install()
     return CHROMEDRIVER_PATH
+
+# NEW: In-memory dictionary to track scraping jobs
+# job_id -> {"status": "pending"/"finished"/"error",
+#            "zip_filename": <str or None>,
+#            "error": <str or None>}
+SCRAPE_JOBS = {}
 
 # === Functions for Scrolling and Interaction ===
 # Function to scroll the page for lazy loading
@@ -287,75 +296,142 @@ def play_success_sound():
     except Exception as e:
         print(f"Error playing sound: {e}")
 
-# NEW DOWNLOAD ENDPOINT: Serve downloaded zip files
-@app.route('/download/<filename>')
-def download_file(filename):
-    return send_from_directory('downloaded_images', filename, as_attachment=True)
+# === NEW: The background thread function that runs the actual scraping ===
+def do_scrape_background(website_url, job_id):
+    """This function is executed in a separate thread."""
+    try:
+        # Mark job as pending (in case the user checks immediately)
+        SCRAPE_JOBS[job_id]["status"] = "in_progress"
 
-@app.route('/scrape', methods=['POST'])
-def scrape_images():
+        chrome_options = Options()
+        chrome_options.binary_location = os.environ.get("CHROME_BIN", "/usr/bin/google-chrome")
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                                    "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
+        driver = webdriver.Chrome(service=Service(get_chromedriver_path()), options=chrome_options)
+
+        print(f"[Thread] Processing: {website_url}")
+        driver.get(website_url)
+        time.sleep(5)
+        scroll_page(driver)
+        trigger_slider(driver)
+
+        page_title = get_meta_title(driver)
+        image_urls = extract_full_res_images(driver)
+        driver.quit()
+
+        if not image_urls:
+            SCRAPE_JOBS[job_id]["status"] = "finished"
+            SCRAPE_JOBS[job_id]["zip_filename"] = None
+            return
+
+        folder_name = os.path.join("downloaded_images", page_title)
+        os.makedirs(folder_name, exist_ok=True)
+
+        for img_url in image_urls:
+            download_image(img_url, folder_name, website_url)
+
+        saved_files = [f for f in os.listdir(folder_name)
+                       if os.path.isfile(os.path.join(folder_name, f))]
+        count = len(saved_files)
+
+        # Create a zip
+        zip_filename = f"{page_title}.zip"
+        zip_filepath = os.path.join("downloaded_images", zip_filename)
+        with zipfile.ZipFile(zip_filepath, 'w') as zipf:
+            for root, dirs, files in os.walk(folder_name):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    zipf.write(file_path, arcname=file)
+
+        # Mark the job as finished
+        SCRAPE_JOBS[job_id]["status"] = "finished"
+        SCRAPE_JOBS[job_id]["zip_filename"] = zip_filename
+        print(f"[Thread] Scrape job {job_id} done. Downloaded {count} images.")
+
+        # Optionally play success sound
+        play_success_sound()
+
+    except Exception as e:
+        SCRAPE_JOBS[job_id]["status"] = "error"
+        SCRAPE_JOBS[job_id]["error"] = str(e)
+        print(f"[Thread] Error in job {job_id}: {e}")
+
+# === NEW: 1) Start Scrape Endpoint
+@app.route('/start_scrape', methods=['POST'])
+def start_scrape():
+    """
+    The extension calls this endpoint to begin scraping.
+    We immediately return a job_id and run the actual logic in a thread.
+    """
     data = request.json
     website_url = data.get("url")
     if not website_url:
         return jsonify({"error": "No URL provided"}), 400
-    
-    chrome_options = Options()
-    chrome_options.binary_location = os.environ.get("CHROME_BIN", "/usr/bin/google-chrome")
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
-    driver = webdriver.Chrome(service=Service(get_chromedriver_path()), options=chrome_options)
 
-    print(f"Processing: {website_url}")
-    driver.get(website_url)
-    time.sleep(5)
-    
-    scroll_page(driver)
-    trigger_slider(driver)
-    
-    page_title = get_meta_title(driver)
-    image_urls = extract_full_res_images(driver)
-    driver.quit()
+    # Generate a unique job ID
+    job_id = str(uuid.uuid4())
 
-    if not image_urls:
-        return jsonify({"message": "No images found", "images": []})
+    # Initialize job record
+    SCRAPE_JOBS[job_id] = {
+        "status": "pending",
+        "zip_filename": None,
+        "error": None
+    }
 
-    folder_name = os.path.join("downloaded_images", page_title)
-    os.makedirs(folder_name, exist_ok=True)
+    # Spawn a background thread
+    thread = threading.Thread(target=do_scrape_background, args=(website_url, job_id))
+    thread.start()
 
-    # Download images (one by one)
-    for img_url in image_urls:
-        download_image(img_url, folder_name, website_url)
+    # Immediately return job_id to the client
+    return jsonify({"job_id": job_id}), 202
 
-    # Now count the actual files saved in the folder
-    saved_files = [f for f in os.listdir(folder_name) if os.path.isfile(os.path.join(folder_name, f))]
-    count = len(saved_files)
+# === NEW: 2) Poll for Status
+@app.route('/job_status', methods=['GET'])
+def job_status():
+    """
+    The extension can call GET /job_status?job_id=XYZ to see if it's done.
+    """
+    job_id = request.args.get("job_id")
+    if not job_id or job_id not in SCRAPE_JOBS:
+        return jsonify({"error": "Invalid or missing job_id"}), 400
 
-    # Create a zip file of the downloaded images
-    zip_filename = f"{page_title}.zip"
-    zip_filepath = os.path.join("downloaded_images", zip_filename)
-    with zipfile.ZipFile(zip_filepath, 'w') as zipf:
-        for root, dirs, files in os.walk(folder_name):
-            for file in files:
-                file_path = os.path.join(root, file)
-                # arcname=file ensures only the file name is used in the archive
-                zipf.write(file_path, arcname=file)
-    
-    # Construct the download URL (assuming your service is hosted at https://scrape-master-ymzg.onrender.com)
-    download_url = f"/download/{zip_filename}"
-
-    # Return the JSON response including the download URL
-    response = jsonify({
-        "message": f"Scraping complete, downloaded {count} images",
-        "images": saved_files,
-        "folder": folder_name,
-        "download_url": download_url
+    job_info = SCRAPE_JOBS[job_id]
+    return jsonify({
+        "status": job_info["status"],
+        "zip_filename": job_info["zip_filename"],
+        "error": job_info["error"]
     })
-    response.call_on_close(play_success_sound)
-    return response
+
+# === NEW: 3) Download Result
+@app.route('/download_result', methods=['GET'])
+def download_result():
+    """
+    Once the status is 'finished', the extension can call
+    GET /download_result?job_id=XYZ to get the ZIP file.
+    """
+    job_id = request.args.get("job_id")
+    if not job_id or job_id not in SCRAPE_JOBS:
+        return jsonify({"error": "Invalid or missing job_id"}), 400
+
+    job_info = SCRAPE_JOBS[job_id]
+    if job_info["status"] != "finished":
+        return jsonify({"error": "Job not finished or in error state"}), 400
+
+    zip_filename = job_info["zip_filename"]
+    if not zip_filename:
+        return jsonify({"error": "No images found"}), 400
+
+    # Serve the zip file from downloaded_images folder
+    return send_from_directory(
+        "downloaded_images",
+        zip_filename,
+        as_attachment=True
+    )
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
