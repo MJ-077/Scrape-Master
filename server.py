@@ -339,6 +339,8 @@ def do_scrape_background(website_url, job_id):
                        if os.path.isfile(os.path.join(folder_name, f))]
         count = len(saved_files)
 
+        SCRAPE_JOBS[job_id]["imagesCount"] = count
+
         # Create a zip
         zip_filename = f"{page_title}.zip"
         zip_filepath = os.path.join("downloaded_images", zip_filename)
@@ -404,7 +406,8 @@ def job_status():
     return jsonify({
         "status": job_info["status"],
         "zip_filename": job_info["zip_filename"],
-        "error": job_info["error"]
+        "error": job_info["error"],
+        "imagesCount": job_info.get("imagesCount", 0)
     })
 
 # === NEW: 3) Download Result
