@@ -11,8 +11,8 @@ import re
 import platform
 import subprocess
 import zipfile
-import threading  # NEW: for background tasks
-import uuid       # NEW: to generate unique job IDs
+import threading  
+import uuid      
 
 from urllib.parse import urljoin, urlparse
 from pathlib import Path
@@ -24,8 +24,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
-from pydub import AudioSegment
-from pydub.playback import play
 
 app = Flask(__name__)
 from flask_cors import CORS
@@ -276,26 +274,6 @@ def get_meta_title(driver):
         print(f"Error retrieving page title: {e}")
         return "Unknown_Page"
 
-# **Play sound in a separate thread**
-def play_success_sound():
-    sound_path = Path(__file__).parent / "success.wav"
-
-    if not sound_path.exists():
-        print("Sound file not found:", sound_path)
-        return
-
-    try:
-        if platform.system() == "Windows":
-            # Use a different player for Windows to avoid playsound errors
-            subprocess.run(["powershell", "-c", f"(New-Object Media.SoundPlayer '{sound_path}').PlaySync()"], check=True)
-        else:
-            # Use pydub for Linux/macOS compatibility
-            sound = AudioSegment.from_file(sound_path)
-            play(sound)
-
-    except Exception as e:
-        print(f"Error playing sound: {e}")
-
 # === NEW: The background thread function that runs the actual scraping ===
 def do_scrape_background(website_url, job_id):
     """This function is executed in a separate thread."""
@@ -354,9 +332,6 @@ def do_scrape_background(website_url, job_id):
         SCRAPE_JOBS[job_id]["status"] = "finished"
         SCRAPE_JOBS[job_id]["zip_filename"] = zip_filename
         print(f"[Thread] Scrape job {job_id} done. Downloaded {count} images.")
-
-        # Optionally play success sound
-        play_success_sound()
 
     except Exception as e:
         SCRAPE_JOBS[job_id]["status"] = "error"
