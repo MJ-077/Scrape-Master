@@ -14,7 +14,7 @@ import zipfile
 import threading  
 import uuid      
 
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlunparse, parse_qs, urlencode
 from pathlib import Path
 
 import requests
@@ -78,9 +78,38 @@ def trigger_slider(driver):
 
 # --- URL Cleaning and Generation ---
 # Combined function to remove dimensions and generate full-size image URLs
+def remove_query_dimensions(url):
+    """
+    Removes common dimension parameters like 'width' and 'height'
+    from a URL's query string (e.g., ?width=123&height=456).
+    """
+    parsed = urlparse(url)
+    qs = parse_qs(parsed.query)
+
+    filtered_qs = {}
+    for key, values in qs.items():
+        # If key is something other than width or height, keep it
+        if key.lower() not in ["width", "height"]:
+            filtered_qs[key] = values
+
+    # Reconstruct the final URL without those dimension keys
+    new_query = urlencode(filtered_qs, doseq=True)
+    new_url = urlunparse((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path,
+        parsed.params,
+        new_query,
+        parsed.fragment
+    ))
+    return new_url
+
 def clean_and_generate_urls(url):
     # Step 1: Remove /thumbs/ and /thumb/ Directories
     url = url.replace("/thumbs/", "/").replace("/thumb/", "/")
+
+    # Step 1.5: Remove dimension-based query parameters (?width=..., ?height=...)
+    url = remove_query_dimensions(url)
 
     # Step 2: Remove Dimensions
     url = re.sub(r'/\d+x\d+/', '/', url)
